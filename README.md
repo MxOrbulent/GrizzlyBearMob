@@ -1,4 +1,4 @@
-This fork buffs the bears health and attack by 100%, effectively making them twice as strong.
+This fork buffs the bears health and attack by 100%, effectively making them twice as strong, and makes them move slightly faster.
 All credit to the original creator for the mod. You can see the original README below.
 
 
