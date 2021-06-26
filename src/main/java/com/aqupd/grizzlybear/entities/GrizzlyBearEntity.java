@@ -323,6 +323,26 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
             if (GrizzlyBearEntity.this.isBaby()) {
                 this.callSameTypeForRevenge();
                 this.stop();
+            } else if (this.getEntityWorld().getDifficulty().getName().equals("Hard")) {
+            
+            if (GrizzlyBearEntity.this.getHealth < 15F) {
+             //The bear is enraged due to being low on health, so we give it a 25% chance to enrage, increasing it's movementspeed with 0,50D
+                Random rnd = New Random();
+                int rndint = rnd.nextInt(3);
+                if (rndint == 1) {
+                EntityAttributeModifier modifyspeed = new EntityAttributeModifier("GENERIC_MOVEMENT_SPEED",0.50D, EntityAttributeModifier.Operation.ADDITION);
+                this.getAttributeInstance(EntityAttribute.GENERIC_MOVEMENT_SPEED).addTemporaryModifier(modifyspeed);
+                DefaultParticleType parameters = ParticleTypes.ANGRY_VILLAGER;
+    for(int i = 0; i < 8; ++i) {
+      double d = random.nextGaussian() * 0.02D;
+      double e = random.nextGaussian() * 0.02D;
+      double f = random.nextGaussian() * 0.02D;
+      this.world.addParticle(parameters, this.getParticleX(1.0D), this.getRandomBodyY() + 1.0D, this.getParticleZ(1.0D), d, e, f);
+    }
+                this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.3F);
+                }
+            }
+            
             }
 
         }
