@@ -205,6 +205,10 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
 
         if (!this.world.isClient) {
             this.tickAngerLogic((ServerWorld)this.world, true);
+            if (this.rageToDeath == true && this.getServer().getTicks() % 4==0) {
+                this.shouldAngerAt(((ServerWorld) this.world).getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue(),true));
+            }
+
         }
 
     }
