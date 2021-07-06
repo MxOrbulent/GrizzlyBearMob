@@ -11,14 +11,22 @@ import net.minecraft.util.Identifier;
 
 @Environment(EnvType.CLIENT)
 public class GrizzlyBearEntityRenderer extends MobEntityRenderer<GrizzlyBearEntity, GrizzlyBearEntityModel<GrizzlyBearEntity>> {
-    private static final Identifier TEXTURE = new Identifier("aqupd", "textures/entity/grizzly_bear.png");
+    private static final Identifier TEXTURE_NORMAL = new Identifier("aqupd", "textures/entity/grizzly_bear.png");
+    private static final Identifier TEXTURE_RAGE = new Identifier("aqupd", "textures/entity/grizzly_bear_rage.png");
+
 
     public GrizzlyBearEntityRenderer(EntityRenderDispatcher entityRenderDispatcher) {
         super(entityRenderDispatcher, new GrizzlyBearEntityModel(), 0.9F);
     }
 
     public Identifier getTexture(GrizzlyBearEntity grizzlyBearEntity) {
-        return TEXTURE;
+
+
+        if (grizzlyBearEntity.rageToDeath == true) {
+            return TEXTURE_RAGE;
+        }
+
+        return TEXTURE_NORMAL;
     }
 
     protected void scale(GrizzlyBearEntity grizzlyBearEntity, MatrixStack matrixStack, float f) {

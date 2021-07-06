@@ -7,6 +7,7 @@ package com.aqupd.grizzlybear.entities;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -14,10 +15,13 @@ import com.aqupd.grizzlybear.Main;
 import com.aqupd.grizzlybear.ai.GrizzlyBearFishGoal;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.Durations;
 import net.minecraft.entity.ai.goal.*;
+import net.minecraft.entity.attribute.EntityAttribute;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.attribute.DefaultAttributeContainer.Builder;
 import net.minecraft.entity.damage.DamageSource;
@@ -31,6 +35,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.particle.DefaultParticleType;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
@@ -51,6 +57,8 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     private static final Ingredient LOVINGFOOD;
     private int angerTime;
     private UUID targetUuid;
+    public boolean rageToDeath;
+
 
     public GrizzlyBearEntity(EntityType<? extends GrizzlyBearEntity> entityType, World world) {
         super(entityType, world);
@@ -132,8 +140,26 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     protected SoundEvent getAmbientSound() {
         return this.isBaby() ? Main.GRIZZLY_BEAR_AMBIENT_BABY : Main.GRIZZLY_BEAR_AMBIENT;
     }
-
+    //We can use this to implement a rage mechanic.
     protected SoundEvent getHurtSound(DamageSource source) {
+        if (this.rageToDeath == false && this.getHealth() < 15f && new Random().nextInt(5) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getName() == "Hard") {
+            this.rageToDeath = true;
+            EntityAttributeModifier rageMovementSpeed = new EntityAttributeModifier(UUID.randomUUID(),"grizzlybear_ragems",0.35D,EntityAttributeModifier.Operation.ADDITION);
+            this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).addPersistentModifier(rageMovementSpeed);
+            DefaultParticleType parameters = ParticleTypes.ANGRY_VILLAGER;
+            for(int i = 0; i < 12; ++i) {
+                double d = random.nextGaussian() * 0.02D;
+                double e = random.nextGaussian() * 0.02D;
+                double f = random.nextGaussian() * 0.02D;
+                this.world.addParticle(parameters, this.getParticleX(1.0D), this.getRandomBodyY() + 1.0D, this.getParticleZ(1.0D), d, e, f);
+            }
+            this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.3F);
+        }
+
+
+
+
+
         return Main.GRIZZLY_BEAR_HURT;
     }
 
@@ -321,24 +347,6 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
             if (GrizzlyBearEntity.this.isBaby()) {
                 this.callSameTypeForRevenge();
                 this.stop();
-            } else if (this.getEntityWorld().getDifficulty().getName().equals("Hard")) {
-            
-            if (GrizzlyBearEntity.this.getHealth < 15F) {
-             //The bear is enraged due to being low on health, so we give it a 25% chance to enrage, increasing it's movementspeed with 0,50D
-                Random rnd = New Random();
-                int rndint = rnd.nextInt(3);
-                if (rndint == 1) {
-                EntityAttributeModifier modifyspeed = new EntityAttributeModifier("GENERIC_MOVEMENT_SPEED",0.50D, EntityAttributeModifier.Operation.ADDITION);
-                this.getAttributeInstance(EntityAttribute.GENERIC_MOVEMENT_SPEED).addTemporaryModifier(modifyspeed);
-                DefaultParticleType parameters = ParticleTypes.ANGRY_VILLAGER;
-    for(int i = 0; i < 8; ++i) {
-      double d = random.nextGaussian() * 0.02D;
-      double e = random.nextGaussian() * 0.02D;
-      double f = random.nextGaussian() * 0.02D;
-      this.world.addParticle(parameters, this.getParticleX(1.0D), this.getRandomBodyY() + 1.0D, this.getParticleZ(1.0D), d, e, f);
-    }
-                this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.3F);
-                }
             }
 
         }
