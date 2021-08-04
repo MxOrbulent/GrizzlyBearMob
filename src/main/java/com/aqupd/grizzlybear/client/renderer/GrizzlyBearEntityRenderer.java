@@ -8,6 +8,7 @@ import net.minecraft.client.render.entity.EntityRendererFactory.Context;
 import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 
 @Environment(EnvType.CLIENT)
@@ -20,11 +21,13 @@ public class GrizzlyBearEntityRenderer extends MobEntityRenderer<GrizzlyBearEnti
     }
 
     public Identifier getTexture(GrizzlyBearEntity grizzlyBearEntity) {
-        if (grizzlyBearEntity.rageToDeath == true) {
+        if (grizzlyBearEntity.isRageToDeath()) {
+            System.out.println("RAGE!");
             return TEXTURE_RAGE;
+        } else {
+            System.out.println("NO RAGE!");
+            return TEXTURE_NORMAL;
         }
-
-        return TEXTURE_NORMAL;
     }
 
     protected void scale(GrizzlyBearEntity grizzlyBearEntity, MatrixStack matrixStack, float f) {

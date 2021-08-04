@@ -5,15 +5,22 @@
 
 package com.aqupd.grizzlybear.entities;
 
+import java.io.File;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
 import com.aqupd.grizzlybear.Main;
 import com.aqupd.grizzlybear.ai.*;
+import com.aqupd.grizzlybear.client.renderer.GrizzlyBearEntityRenderer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.rendereregistry.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.impl.client.renderer.registry.EntityRendererRegistryImpl;
 import net.minecraft.block.BlockState;
+import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRenderers;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityData;
 import net.minecraft.entity.EntityDimensions;
@@ -22,6 +29,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.Durations;
+
 import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -40,8 +48,11 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceReloader;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
@@ -54,6 +65,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     private static final TrackedData<Boolean> WARNING;
+    private static final TrackedData<Boolean> RAGETODEATH;
     private float lastWarningAnimationProgress;
     private float warningAnimationProgress;
     private int warningSoundCooldown;
@@ -81,6 +93,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
             return ActionResult.success(this.world.isClient);
         } else {
             return super.interactMob(player, hand);
+
         }
     }
 
@@ -145,18 +158,30 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     }
 
     protected SoundEvent getHurtSound(DamageSource source) {
-        if (this.rageToDeath == false && this.getHealth() < 15f && new Random().nextInt(5) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getName() == "Hard") {
-            this.rageToDeath = true;
+
+        if (this.isRageToDeath() == false && this.getHealth() < 20f && new Random().nextInt(2) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getName() == "hard") {
+            ((PlayerEntity) source.getAttacker()).sendMessage(Text.of("The bear looks really angry!!! HE MAD BRUH!"),false);
+            this.setCustomName(Text.of("I AM THE ANGER"));
+            this.setCustomNameVisible(true);
+            this.setRageToDeath(true);
+            System.out.println("RageToDeath is: " + this.isRageToDeath());
+            ((PlayerEntity) source.getAttacker()).sendMessage(Text.of("Bear speed is " + this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).getValue()),false);
             EntityAttributeModifier rageMovementSpeed = new EntityAttributeModifier(UUID.randomUUID(),"grizzlybear_ragems",0.35D,EntityAttributeModifier.Operation.ADDITION);
             this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).addPersistentModifier(rageMovementSpeed);
             DefaultParticleType parameters = ParticleTypes.ANGRY_VILLAGER;
-            for(int i = 0; i < 12; ++i) {
-                double d = random.nextGaussian() * 0.02D;
-                double e = random.nextGaussian() * 0.02D;
-                double f = random.nextGaussian() * 0.02D;
-                this.world.addParticle(parameters, this.getParticleX(1.0D), this.getRandomBodyY() + 1.0D, this.getParticleZ(1.0D), d, e, f);
+            for(int i = 0; i < 14; ++i) {
+                double d = random.nextGaussian() * 0.75D;
+                double e = random.nextGaussian() * 0.75D;
+                double f = random.nextGaussian() * 0.75D;
+                ServerWorld serverworldyay = (ServerWorld) this.world;
+                serverworldyay.spawnParticles(parameters,this.getX(), this.getY() + 1D,this.getZ(),2,d,e,f,0.5D);
             }
+
             this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.3F);
+            this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.7F);
+            this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.9F);
+            ((PlayerEntity) source.getAttacker()).sendMessage(Text.of("Bear speed is now after rage: " + this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).getValue()),false);
+
         }
 
 
@@ -182,6 +207,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     protected void initDataTracker() {
         super.initDataTracker();
         this.dataTracker.startTracking(WARNING, false);
+        this.dataTracker.startTracking(RAGETODEATH, false);
     }
 
     public void tick() {
@@ -205,8 +231,11 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
 
         if (!this.world.isClient) {
             this.tickAngerLogic((ServerWorld)this.world, true);
-            if (this.rageToDeath == true && this.getServer().getTicks() % 4==0) {
-                this.shouldAngerAt(((ServerWorld) this.world).getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue(),true));
+            if (this.isRageToDeath() == true && this.getServer().getTicks() % 100==0) {
+                if (this.world.getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue(),true) != null) {
+                    this.setAngryAt(this.world.getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue(),true).getUuid());
+                }
+
             }
         }
 
@@ -239,6 +268,14 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
         this.dataTracker.set(WARNING, warning);
     }
 
+    public boolean isRageToDeath() {
+        return this.dataTracker.get(RAGETODEATH);
+    }
+
+    public void setRageToDeath(boolean rage) {
+        this.dataTracker.set(RAGETODEATH, rage);
+    }
+
     @Environment(EnvType.CLIENT)
     public float getWarningAnimationProgress(float tickDelta) {
         return MathHelper.lerp(tickDelta, this.lastWarningAnimationProgress, this.warningAnimationProgress) / 6.0F;
@@ -258,9 +295,12 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
 
     static {
         WARNING = DataTracker.registerData(GrizzlyBearEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+        RAGETODEATH = DataTracker.registerData(GrizzlyBearEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
         ANGER_TIME_RANGE = Durations.betweenSeconds(20, 39);
         LOVINGFOOD = Ingredient.ofItems(Items.COD, Items.SALMON, Items.SWEET_BERRIES);
     }
+
+
 
     class GrizzlyBearEscapeDangerGoal extends EscapeDangerGoal {
         public GrizzlyBearEscapeDangerGoal() {
