@@ -1,5 +1,5 @@
 package com.aqupd.grizzlybear;
-
+//Master Branch.
 import com.aqupd.grizzlybear.client.renderer.GrizzlyBearEntityRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
