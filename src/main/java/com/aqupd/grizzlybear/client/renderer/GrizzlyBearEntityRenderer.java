@@ -22,7 +22,7 @@ public class GrizzlyBearEntityRenderer extends MobEntityRenderer<GrizzlyBearEnti
     public Identifier getTexture(GrizzlyBearEntity grizzlyBearEntity) {
 
 
-        if (grizzlyBearEntity.rageToDeath == true) {
+        if (grizzlyBearEntity.isInRageMode() == true) {
             return TEXTURE_RAGE;
         }
 
