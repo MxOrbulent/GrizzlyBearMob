@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
+import net.minecraft.block.dispenser.DispenserBehavior;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
@@ -60,6 +61,8 @@ public class Main implements ModInitializer {
 				GRIZZLYBEAR,
 				60, 2, 4 // weight/min group size/max group size
 		);
+		//Calling this so that the spawn egg for the grizzly bear can properly be used with dispensers.
+		DispenserBehavior.registerDefaults();
 		logInfo("Grizzly Bears mod is loaded!");
 	}
 }

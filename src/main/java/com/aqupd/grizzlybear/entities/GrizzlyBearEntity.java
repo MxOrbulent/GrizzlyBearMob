@@ -36,8 +36,10 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.DefaultParticleType;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
@@ -56,6 +58,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     private static final Ingredient LOVINGFOOD;
     private int angerTime;
     private UUID targetUuid;
+    public float angle = 0f;
 
     private int rageModeTimeInTicks;
 
@@ -152,19 +155,35 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     }
     //We can use this to implement a rage mechanic.
     protected SoundEvent getHurtSound(DamageSource source) {
-        if (this.isInRageMode() == false && this.getHealth() < 15f && new Random().nextInt(5) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getName() == "Hard") {
+        if (!this.isInRageMode() && this.getHealth() < 15f && new Random().nextInt(2) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getName() == "hard") {
             this.setInRageMode(true);
             EntityAttributeModifier rageMovementSpeed = new EntityAttributeModifier(UUID.randomUUID(),"grizzlybear_ragems",0.35D,EntityAttributeModifier.Operation.ADDITION);
             this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).addPersistentModifier(rageMovementSpeed);
+
             DefaultParticleType parameters = ParticleTypes.ANGRY_VILLAGER;
-            for(int i = 0; i < 12; ++i) {
-                double d = random.nextGaussian() * 0.02D;
-                double e = random.nextGaussian() * 0.02D;
-                double f = random.nextGaussian() * 0.02D;
-                this.world.addParticle(parameters, this.getParticleX(1.0D), this.getRandomBodyY() + 1.0D, this.getParticleZ(1.0D), d, e, f);
+            for(int i = 0; i < 14; ++i) {
+                double d = random.nextGaussian() * 0.75D;
+                double e = random.nextGaussian() * 0.75D;
+                double f = random.nextGaussian() * 0.75D;
+                ServerWorld serverworldyay = (ServerWorld) this.world;
+                serverworldyay.spawnParticles(parameters,this.getX(), this.getY() + 1D,this.getZ(),2,d,e,f,0.5D);
             }
             this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.3F);
-            this.setRageModeTimeInTicks(1200);
+            this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.5F);
+            this.setRageModeTimeInTicks(600);
+        } else {
+            source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(),"/say DmgSource: "+source.getName() + " Attacker: " + source.getAttacker().getEntityName());
+            if (source.getAttacker() instanceof PlayerEntity) {
+                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say Attacker is instanceof PlayerEntity");
+                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say Health of the bear is: "+this.getHealth());
+                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say difficulty is " + source.getAttacker().getEntityWorld().getDifficulty().getName());
+
+
+            } else if (source.getAttacker() instanceof ServerPlayerEntity) {
+                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say Attacker is instanceof ServerPlayerEntity");
+            } else {
+                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say We have no fucking idea who the attacker is");
+            }
         }
 
 
@@ -215,15 +234,51 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
             --this.warningSoundCooldown;
         }
 
-        if (this.getRageModeTimeInTicks() > 0 && !this.isAttacking()) {
+        if (this.getRageModeTimeInTicks() > 0 && this.getAngryAt() == null) {
             this.setRageModeTimeInTicks(this.getRageModeTimeInTicks() - 1);
-
+            if (this.getRageModeTimeInTicks() == 0) {
+                this.setInRageMode(false);
+            }
         }
 
         if (!this.world.isClient) {
             this.tickAngerLogic((ServerWorld)this.world, true);
-            if (this.isInRageMode() == true && this.getServer().getTicks() % 4==0) {
-                this.shouldAngerAt(((ServerWorld) this.world).getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue(),true));
+            if (this.isInRageMode() == true && this.getServer().getTicks() % 4==0 && this.getAngryAt() == null) {
+                if (((ServerWorld) this.world).getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue() - 10.0D,true) != null) {
+                    this.setAngryAt(((ServerWorld) this.world).getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue() - 10.0D + 5.0D,true).getUuid());
+                }
+
+                }
+            //workaround because sometimes the bear still get's angry at creative mode players.
+            if (this.getAngryAt() != null) {
+                if (this.getTarget() instanceof PlayerEntity) {
+                    if (((PlayerEntity) this.getTarget()).isCreative()) {
+                        this.setAngryAt(null);
+                    }
+                }
+                //Debug code that helps show roughly the generic follow range.
+                /*float radius = (float) this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE - 10.0D).getValue();
+
+                //Code to draw aggro range
+                DefaultParticleType parameters = ParticleTypes.FLAME;
+                double x = (radius * Math.sin(angle));
+                double z = (radius * Math.cos(angle));
+                ServerWorld serverworldyay = (ServerWorld) this.world;
+                serverworldyay.spawnParticles(parameters,this.getX()+x, this.getY() + 1D,this.getZ()+z,3,0D,0D,0D,0D);
+                serverworldyay.spawnParticles(parameters,this.getX()+x, this.getY() + 1D,this.getZ()+z,1,0.01D,0.01D,0.01D,0D);
+                serverworldyay.spawnParticles(parameters,this.getX()+x, this.getY() + 1D,this.getZ()+z,1,0.02D,0.02D,0.02D,0D);
+                angle += 0.05;
+                this.getServer().getCommandManager().execute(this.getServer().getCommandSource(), "/say I'M MAD AT UUID "+this.getAngryAt().toString()+"!!!");*/
+                if (this.getServer().getPlayerManager().getPlayer(this.getAngryAt()) == null || ((ServerWorld) this.world).getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue() - 10.0D,true) == null && !(this.getTarget() instanceof PlayerEntity)) {
+
+                    this.setAngryAt(null);
+                }
+                if (this.getTarget() != null) {
+                    if (this.getTarget().isDead()) {
+                        this.setAngryAt(null);
+                    }
+
+                }
             }
 
         }
