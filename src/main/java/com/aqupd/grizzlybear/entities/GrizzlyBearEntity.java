@@ -59,6 +59,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     private int angerTime;
     private UUID targetUuid;
     public float angle = 0f;
+    private EntityAttributeModifier rageMovementSpeed;
 
     private int rageModeTimeInTicks;
 
@@ -114,10 +115,13 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
         this.targetSelector.add(4, new FollowTargetGoal(this, RabbitEntity.class, 10, true, true, (Predicate) null));
         this.targetSelector.add(4, new FollowTargetGoal(this, ChickenEntity.class, 10, true, true, (Predicate) null));
         this.targetSelector.add(5, new UniversalAngerGoal(this, false));
+
     }
 
     public static Builder createGrizzlyBearAttributes() {
+
         return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 60.0D).add(EntityAttributes.GENERIC_FOLLOW_RANGE, 20.0D).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.35D).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 12.0D);
+
     }
 
     public void readCustomDataFromNbt(NbtCompound tag) {
@@ -157,8 +161,9 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     protected SoundEvent getHurtSound(DamageSource source) {
         if (!this.isInRageMode() && this.getHealth() < 15f && new Random().nextInt(2) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getName() == "hard") {
             this.setInRageMode(true);
-            EntityAttributeModifier rageMovementSpeed = new EntityAttributeModifier(UUID.randomUUID(),"grizzlybear_ragems",0.35D,EntityAttributeModifier.Operation.ADDITION);
+
             this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).addPersistentModifier(rageMovementSpeed);
+
 
             DefaultParticleType parameters = ParticleTypes.ANGRY_VILLAGER;
             for(int i = 0; i < 14; ++i) {
@@ -238,6 +243,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
             this.setRageModeTimeInTicks(this.getRageModeTimeInTicks() - 1);
             if (this.getRageModeTimeInTicks() == 0) {
                 this.setInRageMode(false);
+                this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).removeModifier(this.rageMovementSpeed.getId());
             }
         }
 
@@ -325,7 +331,9 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
         if (entityData == null) {
             entityData = new PassiveData(1.0F);
         }
+        double CalculatePercentageOfGenericMSForBuff = this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).getValue()*Main.PercentageAsDoubleForRageModeMSSpeedBuff;
 
+        this.rageMovementSpeed = new EntityAttributeModifier(UUID.randomUUID(),"grizzlybear_ragems",CalculatePercentageOfGenericMSForBuff,EntityAttributeModifier.Operation.ADDITION);
         return super.initialize(world, difficulty, spawnReason, (EntityData)entityData, entityTag);
     }
 
