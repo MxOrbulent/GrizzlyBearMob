@@ -61,7 +61,8 @@ public class Main implements ModInitializer {
 	public static double GENERIC_MOVEMENT_SPEED_CONFIG;
     //Rage mode buff
 	public static double PercentageAsDoubleForRageModeMSSpeedBuff;
-	public static String DifficultyForRageMode;
+	public static int DifficultyForRageMode;
+	public static int RageModeTimeInTicks;
 	public static boolean DoSpawnRageParticles;
 	public static boolean DoUseRageMode;
 
@@ -105,6 +106,8 @@ public class Main implements ModInitializer {
 		doublevalues.put("Range",20D);
 		doublevalues.put("MovementSpeed",0.30D);
 		doublevalues.put("PercentageToIncreaseMovementSpeed",25D);
+		Map<String, Integer> integervalues = new HashMap<>();
+		integervalues.put("RageModeInTicks",600);
 		Map<String, String> stringvalues = new HashMap<>();
 		stringvalues.put("Difficulty","hard");
 
@@ -140,6 +143,19 @@ public class Main implements ModInitializer {
 					//new line
 					bf.newLine();
 				}
+				bf.write("# Set how many ticks the rage mode will last for when activated (it does not decrease if the bear has a player target)");
+				bf.newLine();
+				bf.write("# 1 second = 20 ticks. Default is 600 ticks (30 seconds)");
+				bf.newLine();
+				for(Map.Entry<String, Double> entry : doublevalues.entrySet()){
+
+					//put key and value separated by a colon
+					bf.write( entry.getKey() + "=" + entry.getValue().toString().replaceAll("[^0-9.]", "").trim() );
+
+					//new line
+					bf.newLine();
+				}
+
 				bf.write("# Boolean options (true or false, do not be a smartass and write TrUe or TRUE or misspell)");
 				bf.newLine();
 				for(Map.Entry<String, Boolean> entry : booleanoptions.entrySet()){
@@ -171,7 +187,8 @@ public class Main implements ModInitializer {
 				Main.GENERIC_MAX_HEALTH_CONFIG = 60D;
 				Main.GENERIC_FOLLOW_RANGE_CONFIG = 20D;
 				Main.GENERIC_MOVEMENT_SPEED_CONFIG = 0.30D;
-				Main.DifficultyForRageMode = "hard";
+				Main.RageModeTimeInTicks = 600;
+				Main.DifficultyForRageMode = 3;
 				Main.PercentageAsDoubleForRageModeMSSpeedBuff = 0.25D;
 				Main.DoSpawnRageParticles = true;
 				Main.DoUseRageMode = true;
@@ -194,7 +211,8 @@ public class Main implements ModInitializer {
 			Main.GENERIC_MAX_HEALTH_CONFIG = 60D;
 			Main.GENERIC_FOLLOW_RANGE_CONFIG = 20D;
 			Main.GENERIC_MOVEMENT_SPEED_CONFIG = 0.30D;
-			Main.DifficultyForRageMode = "hard";
+			Main.RageModeTimeInTicks = 600;
+			Main.DifficultyForRageMode = 3;
 			Main.PercentageAsDoubleForRageModeMSSpeedBuff = 0.25D;
 			Main.DoSpawnRageParticles = true;
 			Main.DoUseRageMode = true;
@@ -239,6 +257,11 @@ public class Main implements ModInitializer {
 
 							break;
 			}
+						case "RageModeInTicks": {
+							Main.RageModeTimeInTicks = Integer.valueOf(value.replaceAll("[^0-9]", "").trim());
+
+							break;
+						}
 						case "PercentageToIncreaseMovementSpeed": {
 							double percentage = parsedDouble;
 							double percentageasdouble = percentage / 100;
@@ -264,11 +287,27 @@ public class Main implements ModInitializer {
 							}
 							break;
 						case "Difficulty":
-							if (!value.equals("peacefull") || !value.equals("easy") || !value.equals("normal") || !value.equals("hard") || !value.equals("hardcore")) {
-								Main.DifficultyForRageMode = "hard";
-							} else {
-								Main.DifficultyForRageMode = value;
-							}
+
+								int valueAsInteger = -1;
+								switch (value) {
+									case "peaceful":
+										valueAsInteger = 0;
+										break;
+									case "easy":
+										valueAsInteger = 1;
+										break;
+									case "normal":
+										valueAsInteger = 2;
+										break;
+									case "hard":
+										valueAsInteger = 3;
+										break;
+									default:
+										 valueAsInteger = 3;
+										break;
+								}
+								Main.DifficultyForRageMode = valueAsInteger;
+
 
 							break;
 						default:
@@ -287,7 +326,8 @@ public class Main implements ModInitializer {
 			Main.GENERIC_MAX_HEALTH_CONFIG = 60D;
 			Main.GENERIC_FOLLOW_RANGE_CONFIG = 20D;
 			Main.GENERIC_MOVEMENT_SPEED_CONFIG = 0.30D;
-			Main.DifficultyForRageMode = "hard";
+			Main.RageModeTimeInTicks = 600;
+			Main.DifficultyForRageMode = 3;
 			Main.PercentageAsDoubleForRageModeMSSpeedBuff = 0.25D;
 			Main.DoSpawnRageParticles = true;
 			Main.DoUseRageMode = true;

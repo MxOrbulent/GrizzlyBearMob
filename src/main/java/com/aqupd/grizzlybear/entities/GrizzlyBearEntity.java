@@ -58,7 +58,9 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     private static final Ingredient LOVINGFOOD;
     private int angerTime;
     private UUID targetUuid;
-    public float angle = 0f;
+    //angle is simply a float value used for drawing a particle circle around the bear, was used for debugging
+    //It will remain incase I need to see the GENERIC FOLLOW RANGE of a bear again.
+    //public float angle = 0f;
     private EntityAttributeModifier rageMovementSpeed;
 
     private int rageModeTimeInTicks;
@@ -120,7 +122,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
 
     public static Builder createGrizzlyBearAttributes() {
 
-        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, 60.0D).add(EntityAttributes.GENERIC_FOLLOW_RANGE, 20.0D).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.35D).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 12.0D);
+        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MAX_HEALTH, Main.GENERIC_MAX_HEALTH_CONFIG).add(EntityAttributes.GENERIC_FOLLOW_RANGE, Main.GENERIC_FOLLOW_RANGE_CONFIG).add(EntityAttributes.GENERIC_MOVEMENT_SPEED, Main.GENERIC_MOVEMENT_SPEED_CONFIG).add(EntityAttributes.GENERIC_ATTACK_DAMAGE, Main.GENERIC_ATTACK_DAMAGE_CONFIG);
 
     }
 
@@ -159,23 +161,25 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     }
     //We can use this to implement a rage mechanic.
     protected SoundEvent getHurtSound(DamageSource source) {
-        if (!this.isInRageMode() && this.getHealth() < 15f && new Random().nextInt(2) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getName() == "hard") {
+        if (!this.isInRageMode() && this.getHealth() < 15f && new Random().nextInt(2) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getId() >= Main.DifficultyForRageMode && Main.DoUseRageMode) {
             this.setInRageMode(true);
 
             this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).addPersistentModifier(rageMovementSpeed);
-
-
-            DefaultParticleType parameters = ParticleTypes.ANGRY_VILLAGER;
-            for(int i = 0; i < 14; ++i) {
-                double d = random.nextGaussian() * 0.75D;
-                double e = random.nextGaussian() * 0.75D;
-                double f = random.nextGaussian() * 0.75D;
-                ServerWorld serverworldyay = (ServerWorld) this.world;
-                serverworldyay.spawnParticles(parameters,this.getX(), this.getY() + 1D,this.getZ(),2,d,e,f,0.5D);
+            //If we want to spawn rage particles
+            if (Main.DoSpawnRageParticles) {
+                DefaultParticleType angryParticle = ParticleTypes.ANGRY_VILLAGER;
+                for(int i = 0; i < 14; ++i) {
+                    double d = random.nextGaussian() * 0.75D;
+                    double e = random.nextGaussian() * 0.75D;
+                    double f = random.nextGaussian() * 0.75D;
+                    ServerWorld serverworldyay = (ServerWorld) this.world;
+                    serverworldyay.spawnParticles(angryParticle,this.getX(), this.getY() + 1D,this.getZ(),2,d,e,f,0.5D);
+                }
             }
+
             this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.3F);
             this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.5F);
-            this.setRageModeTimeInTicks(600);
+            this.setRageModeTimeInTicks(Main.RageModeTimeInTicks);
         } else {
             source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(),"/say DmgSource: "+source.getName() + " Attacker: " + source.getAttacker().getEntityName());
             if (source.getAttacker() instanceof PlayerEntity) {
