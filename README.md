@@ -20,7 +20,7 @@ Original text:
 </ul>
 <h2 align=center>Screenshots</h2>
 <p align=center>
-    <img src="https://imgur.com/WbqdjNA.png">
+    <img src="https://imgur.com/4MrLUHY.png">
     <img src="https://imgur.com/ekEbmqd.png">
     <img src="https://imgur.com/MWTQMF5.png">
 </p>
