@@ -3,7 +3,7 @@ The original scope of this fork has changed alot and thus A small list is needed
     <li> Adds the ability for the mod user to configure the stats of the bear</li>
     <li> Bear now has a rage mode ability, (default 25% chance per hit when below 7.5 hearts to activate) which makes them actively look for players nearby to attack and have increased movement speed</li>
     <li> Accompanying the rage mode is that the bears eyes will turn red while it is in rage mode, giving a clue to players if they are somewhat safe to approach or not.</li>
-    <li> Currently supported MC versions: 1.16.5, 1.17, 1.17.1 and will get a guaranteed migration to 1.18 (minimum)</li>
+    <li> Currently supported MC versions: 1.16.5, 1.17 (coming soon), 1.17.1 (coming soon) and will get a guaranteed migration to 1.18 (minimum)</li>
 </ul>
 
 All credit to the original creator for the mod. You can see the original README below.
