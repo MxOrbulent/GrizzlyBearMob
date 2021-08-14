@@ -169,7 +169,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     }
     //We can use this to implement a rage mechanic on hit.
     protected SoundEvent getHurtSound(DamageSource source) {
-        if (!this.isInRageMode() && this.getHealth() < 15f && new Random().nextInt(2) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getId() >= Main.DifficultyForRageMode && Main.DoUseRageMode) {
+        if (!this.isInRageMode() && this.getHealth() < 15f && new Random().nextInt(3) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getId() >= Main.DifficultyForRageMode && Main.DoUseRageMode) {
             this.setInRageMode(true);
 
             this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).addPersistentModifier(rageMovementSpeed);
