@@ -1,21 +1,30 @@
 package com.aqupd.grizzlybear;
 
 import com.aqupd.grizzlybear.entities.GrizzlyBearEntity;
+
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
 import net.minecraft.block.dispenser.DispenserBehavior;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.SpawnEggItem;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.biome.Biome;
+import org.apache.commons.lang3.math.NumberUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -27,8 +36,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
+import static com.aqupd.grizzlybear.utils.AqLogger.logError;
 import static com.aqupd.grizzlybear.utils.AqLogger.logInfo;
 
 public class Main implements ModInitializer {
@@ -65,9 +74,74 @@ public class Main implements ModInitializer {
 	public static int RageModeTimeInTicks;
 	public static boolean DoSpawnRageParticles;
 	public static boolean DoUseRageMode;
+	public static boolean DebugMod = false;
+	public static boolean incorrectConfigValues = false;
+
 
 	@Override
 	public void onInitialize() {
+		//Config options must be done before doing anything with the bear or it won't properly obtain values from main.
+		//If the bear is not given proper values, for example 0 health. Then the bear dies in one hit and several things
+		//break down and causes errors.
+		//Do Config stuff here.
+		//Check if this mod already has a config
+		File config = new File("./config/grizzlybear.conf");
+		if (!config.exists()) {
+			logInfo("[GrizzlyBearMod] File does not exist. Creating.");
+			createConfig(config);
+		} else {
+			logInfo("[GrizzlyBearMod] File exists. Loading.");
+			loadConfig(config);
+		}
+		//Checking so the double attribute values are not below or equal to 0, if they are. Crash the server.
+		if (GENERIC_MAX_HEALTH_CONFIG <= 0 || GENERIC_MOVEMENT_SPEED_CONFIG <= 0 || GENERIC_FOLLOW_RANGE_CONFIG <= 0 || GENERIC_ATTACK_DAMAGE_CONFIG <= 0) {
+			if (DebugMod) {
+
+
+			logError("Critical Error, you have entered 0 or below (negative number) (0.1 is still above zero) as a value for one or several attribute values");
+			logInfo("In the config, they are named AttackDamage\n" +
+					"MovementSpeed\n" +
+					"Range\n" +
+					"MaxHealth");
+			logInfo("While we could have set them to default values for you, it's clearly not what you intended.");
+			logInfo("Therefore, stopping the server is safer. If you need a new generation of a config if you really messed things up, simply delete the old one and run the server.");
+			logInfo("If your intention was to simply have the bear die in one hit for real for example, just set MaxHealth to 0.1");
+			logInfo("For your information, these are the values we got in the Main class after creating and loading, or loading the config:");
+			if (GENERIC_MAX_HEALTH_CONFIG <= 0) {
+				logError("GENERIC_MAX_HEALTH_CONFIG (MaxHealth) | "+GENERIC_MAX_HEALTH_CONFIG);
+			} else {
+				logInfo("GENERIC_MAX_HEALTH_CONFIG (MaxHealth) | "+GENERIC_MAX_HEALTH_CONFIG);
+			}
+
+				if (GENERIC_ATTACK_DAMAGE_CONFIG <= 0) {
+					logError("GENERIC_ATTACK_DAMAGE_CONFIG (AttackDamage) | "+GENERIC_ATTACK_DAMAGE_CONFIG);
+				} else {
+					logInfo("GENERIC_ATTACK_DAMAGE_CONFIG (AttackDamage) | "+GENERIC_ATTACK_DAMAGE_CONFIG);
+				}
+
+				if (GENERIC_FOLLOW_RANGE_CONFIG <= 0) {
+					logError("GENERIC_FOLLOW_RANGE_CONFIG (Range) | "+GENERIC_FOLLOW_RANGE_CONFIG);
+				} else {
+					logInfo("GENERIC_FOLLOW_RANGE_CONFIG (Range) | "+GENERIC_FOLLOW_RANGE_CONFIG);
+				}
+
+				if (GENERIC_MOVEMENT_SPEED_CONFIG <= 0) {
+
+					logError("GENERIC_MOVEMENT_SPEED_CONFIG (MovementSpeed) | "+GENERIC_MOVEMENT_SPEED_CONFIG);
+				} else {
+					logInfo("GENERIC_MOVEMENT_SPEED_CONFIG (MovementSpeed) | "+GENERIC_MOVEMENT_SPEED_CONFIG);
+				}
+
+
+
+
+			logError("Done printing. incorrectConfigValues will be set to true, which means that the ");
+			logError("Server (or client) will close very soon...");
+			}
+			incorrectConfigValues = true;
+
+
+		}
 		Registry.register(Registry.SOUND_EVENT, Main.ENTITY_GRIZZLY_BEAR_AMBIENT, GRIZZLY_BEAR_AMBIENT);
 		Registry.register(Registry.SOUND_EVENT, Main.ENTITY_GRIZZLY_BEAR_AMBIENT_BABY, GRIZZLY_BEAR_AMBIENT_BABY);
 		Registry.register(Registry.SOUND_EVENT, Main.ENTITY_GRIZZLY_BEAR_DEATH, GRIZZLY_BEAR_DEATH);
@@ -85,16 +159,77 @@ public class Main implements ModInitializer {
 				60, 2, 4 // weight/min group size/max group size
 		);
 		//Calling this so that the spawn egg for the grizzly bear can properly be used with dispensers.
+		//Because it is a unique map, duplicates are not registering again, so this is perfectly safe to use.
 		DispenserBehavior.registerDefaults();
-		//Do Config stuff here.
-		//Check if this mod already has a config
-		File config = new File("./config/grizzlybear.conf");
-		if (!config.exists()) {
-			createConfig(config);
-		} else {
-			loadConfig(config);
+		try {
+			this.ClientLife();
+		} catch (NoSuchMethodError e) {
+			if (DebugMod) {
+
+
+			logInfo("Mod is not in a client environment.");
+			}
 		}
+		//hai
+		try {
+			this.ServerLife();
+		} catch (NoSuchMethodError e) {
+			if (DebugMod) {
+				logInfo("Mod is not in a server environment..");
+			}
+		}
+
+
 		logInfo("[GrizzlyBearMod] has loaded!");
+	}
+	@Environment(EnvType.CLIENT)
+	public void ClientLife() {
+		if (DebugMod) {
+			logInfo("EnvType.CLIENT detected!");
+		}
+
+		ClientLifecycleEvents.CLIENT_STARTED.register(this::onClientStarted);
+	}
+	@Environment(EnvType.SERVER)
+	public void ServerLife() {
+		if (DebugMod) {
+			logInfo("EnvType.SERVER detected!");
+		}
+
+		ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStarted);
+	}
+
+
+
+
+	private void onClientStarted(MinecraftClient minecraftClient) {
+		System.out.println("Started client");
+
+		MinecraftClient client = minecraftClient;
+
+
+			if (Main.incorrectConfigValues) {
+				logError("Closing the client due to incorrect config values. Do not use negative values or 0");
+				logError("You will see some nasty stacktrace errors, but it's harmless.");
+				logError("Just having some issues closing the client normally.");
+				client.scheduleStop();
+			}
+
+	}
+	private void onServerStarted(MinecraftServer minecraftServer) {
+		//System.out.println("Started server");
+
+		MinecraftServer server = minecraftServer;
+
+		if (server.isRunning()) {
+			if (Main.incorrectConfigValues) {
+
+				logError("Closing the server because of incorrect config values. Do not use negative values or 0");
+				server.getCommandManager().execute(server.getCommandSource(),"/stop");
+			}
+		}
+
+
 	}
 	private void createConfig(File config) {
 		Map<String, Boolean> booleanoptions = new HashMap<>();
@@ -137,22 +272,22 @@ public class Main implements ModInitializer {
 				bf.newLine();
 				for(Map.Entry<String, Double> entry : doublevalues.entrySet()){
 
-					//put key and value separated by a colon
+
 					bf.write( entry.getKey() + "=" + entry.getValue().toString().replaceAll("[^0-9.]", "").trim() );
 
-					//new line
+
 					bf.newLine();
 				}
 				bf.write("# Set how many ticks the rage mode will last for when activated (it does not decrease if the bear has a player target)");
 				bf.newLine();
 				bf.write("# 1 second = 20 ticks. Default is 600 ticks (30 seconds)");
 				bf.newLine();
-				for(Map.Entry<String, Double> entry : doublevalues.entrySet()){
+				for(Map.Entry<String, Integer> entry : integervalues.entrySet()){
 
-					//put key and value separated by a colon
+
 					bf.write( entry.getKey() + "=" + entry.getValue().toString().replaceAll("[^0-9.]", "").trim() );
 
-					//new line
+
 					bf.newLine();
 				}
 
@@ -160,20 +295,20 @@ public class Main implements ModInitializer {
 				bf.newLine();
 				for(Map.Entry<String, Boolean> entry : booleanoptions.entrySet()){
 
-					//put key and value separated by a colon
+
 					bf.write( entry.getKey() + "=" + entry.getValue().toString() );
 
-					//new line
+
 					bf.newLine();
 				}
 				bf.write("# This basically sets the minimum difficulty required for the bear to be able to use ragemode, I'd suggest keeping it on hard.");
 				bf.newLine();
 				for(Map.Entry<String, String> entry : stringvalues.entrySet()){
 
-					//put key and value separated by a colon
+
 					bf.write( entry.getKey() + "=" + entry.getValue() );
 
-					//new line
+
 					bf.newLine();
 				}
 
@@ -181,8 +316,8 @@ public class Main implements ModInitializer {
 
 			}catch(IOException e){
 				e.printStackTrace();
-				logInfo("[GrizzlyBearMod] Something went wrong writing to "+config.getAbsolutePath());
-				logInfo("[GrizzlyBearMod] Using default values!");
+				logInfo("Something went wrong writing to "+config.getAbsolutePath());
+				logInfo("Using default values!");
 				Main.GENERIC_ATTACK_DAMAGE_CONFIG = 12D;
 				Main.GENERIC_MAX_HEALTH_CONFIG = 60D;
 				Main.GENERIC_FOLLOW_RANGE_CONFIG = 20D;
@@ -192,7 +327,7 @@ public class Main implements ModInitializer {
 				Main.PercentageAsDoubleForRageModeMSSpeedBuff = 0.25D;
 				Main.DoSpawnRageParticles = true;
 				Main.DoUseRageMode = true;
-				logInfo("[GrizzlyBearMod] Done setting default values!");
+				logInfo("Done setting default values!");
 			}finally{
 
 				try{
@@ -205,8 +340,8 @@ public class Main implements ModInitializer {
 		} catch (IOException e) {
 			//Creating the file went to hell.
 			e.printStackTrace();
-			logInfo("[GrizzlyBearMod] Could not create the config file at "+config.getAbsolutePath());
-			logInfo("[GrizzlyBearMod] Using default values!");
+			logInfo("Could not create the config file at "+config.getAbsolutePath());
+			logInfo("Using default values!");
 			Main.GENERIC_ATTACK_DAMAGE_CONFIG = 12D;
 			Main.GENERIC_MAX_HEALTH_CONFIG = 60D;
 			Main.GENERIC_FOLLOW_RANGE_CONFIG = 20D;
@@ -216,7 +351,7 @@ public class Main implements ModInitializer {
 			Main.PercentageAsDoubleForRageModeMSSpeedBuff = 0.25D;
 			Main.DoSpawnRageParticles = true;
 			Main.DoUseRageMode = true;
-			logInfo("[GrizzlyBearMod] Done setting default values!");
+			logInfo("Done setting default values!");
 		}
 
 
@@ -235,7 +370,16 @@ public class Main implements ModInitializer {
 					String[] splittedstring = line.split("=");
 					String key = splittedstring[0].toString();
 					String value = splittedstring[1].toString();
-					double parsedDouble = Double.parseDouble(value.replaceAll("[^0-9.]", "").trim());
+					if (DebugMod) {
+						logInfo("key is: "+key);
+						logInfo("value is: "+value);
+					}
+
+					double parsedDouble = 0;
+					if (NumberUtils.isCreatable(value.replaceAll("[^0-9.]", "").trim())) {
+						parsedDouble = Double.parseDouble(value.replaceAll("[^0-9.]", "").trim());
+					}
+
 					switch (key) {
 						case "MaxHealth": {
 							Main.GENERIC_MAX_HEALTH_CONFIG = parsedDouble;
@@ -318,10 +462,10 @@ public class Main implements ModInitializer {
 
 				}
 			});
-			logInfo("[GrizzlyBearMod] Done loading config values from "+config.getAbsolutePath());
+			logInfo("Done loading config values from "+config.getAbsolutePath());
 		} else {
-			logInfo("[GrizzlyBearMod] Could not load the config file at "+config.getAbsolutePath());
-			logInfo("[GrizzlyBearMod] Using default values!");
+			logInfo("Could not load the config file at "+config.getAbsolutePath());
+			logInfo("Using default values!");
 			Main.GENERIC_ATTACK_DAMAGE_CONFIG = 12D;
 			Main.GENERIC_MAX_HEALTH_CONFIG = 60D;
 			Main.GENERIC_FOLLOW_RANGE_CONFIG = 20D;
@@ -331,7 +475,7 @@ public class Main implements ModInitializer {
 			Main.PercentageAsDoubleForRageModeMSSpeedBuff = 0.25D;
 			Main.DoSpawnRageParticles = true;
 			Main.DoUseRageMode = true;
-			logInfo("[GrizzlyBearMod] Done setting default values!");
+			logInfo("Done setting default values!");
 		}
 
 	}

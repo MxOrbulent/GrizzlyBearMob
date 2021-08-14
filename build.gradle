@@ -1,6 +1,7 @@
 plugins {
 	id 'fabric-loom' version '0.7-SNAPSHOT'
 	id 'maven-publish'
+	id "org.jetbrains.kotlin.jvm" version '1.5.21'
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8

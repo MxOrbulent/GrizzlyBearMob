@@ -13,9 +13,11 @@ import java.util.function.Predicate;
 
 import com.aqupd.grizzlybear.Main;
 import com.aqupd.grizzlybear.ai.GrizzlyBearFishGoal;
+import com.aqupd.grizzlybear.utils.AqLogger;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.BlockState;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.Durations;
 import net.minecraft.entity.ai.goal.*;
@@ -33,7 +35,9 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.MessageType;
 import net.minecraft.particle.DefaultParticleType;
+import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -46,6 +50,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.IntRange;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.*;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
@@ -59,7 +66,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     private int angerTime;
     private UUID targetUuid;
     //angle is simply a float value used for drawing a particle circle around the bear, was used for debugging
-    //It will remain incase I need to see the GENERIC FOLLOW RANGE of a bear again.
+    //It will remain incase we need to see the GENERIC FOLLOW RANGE of a bear again.
     //public float angle = 0f;
     private EntityAttributeModifier rageMovementSpeed;
 
@@ -118,6 +125,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
         this.targetSelector.add(4, new FollowTargetGoal(this, ChickenEntity.class, 10, true, true, (Predicate) null));
         this.targetSelector.add(5, new UniversalAngerGoal(this, false));
 
+
     }
 
     public static Builder createGrizzlyBearAttributes() {
@@ -159,7 +167,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
     protected SoundEvent getAmbientSound() {
         return this.isBaby() ? Main.GRIZZLY_BEAR_AMBIENT_BABY : Main.GRIZZLY_BEAR_AMBIENT;
     }
-    //We can use this to implement a rage mechanic.
+    //We can use this to implement a rage mechanic on hit.
     protected SoundEvent getHurtSound(DamageSource source) {
         if (!this.isInRageMode() && this.getHealth() < 15f && new Random().nextInt(2) == 1 && source.getAttacker() instanceof PlayerEntity && source.getAttacker().getEntityWorld().getDifficulty().getId() >= Main.DifficultyForRageMode && Main.DoUseRageMode) {
             this.setInRageMode(true);
@@ -168,32 +176,49 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
             //If we want to spawn rage particles
             if (Main.DoSpawnRageParticles) {
                 DefaultParticleType angryParticle = ParticleTypes.ANGRY_VILLAGER;
+                //DustParticleEffect dust = new DustParticleEffect(0.7F,0.0F,0.0F,0.3F);
+                //If some math wiz can do it, please fill in the correct math to obtain a position slightly above the bears eyes. You'd
+                //probably need to do some maths with the model to get a corresponding position in the world relative to the bear etc.
+                //double eyeXPos = 0D;
+                //double eyeZPos = 0D;
+                //End math wiz
                 for(int i = 0; i < 14; ++i) {
                     double d = random.nextGaussian() * 0.75D;
                     double e = random.nextGaussian() * 0.75D;
                     double f = random.nextGaussian() * 0.75D;
                     ServerWorld serverworldyay = (ServerWorld) this.world;
                     serverworldyay.spawnParticles(angryParticle,this.getX(), this.getY() + 1D,this.getZ(),2,d,e,f,0.5D);
+
+                    //serverworldyay.spawnParticles(dust,eyeXPos, this.getY() + 0.5D,eyeZPos,2,d,e,f,0.1D);
                 }
             }
-
+            //Playing the warning sound directly after eachother with different pitches produces an absolutely terrifying sound letting
+            //players know that the bear is seriously pissed off.
             this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.3F);
             this.playSound(Main.GRIZZLY_BEAR_WARNING, 10.0F, 0.5F);
             this.setRageModeTimeInTicks(Main.RageModeTimeInTicks);
         } else {
-            source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(),"/say DmgSource: "+source.getName() + " Attacker: " + source.getAttacker().getEntityName());
+            //The code in this else statement is purely for debugging, do not change debug to true in main for a production environment (aka when not testing stuff).
+
+            if (Main.DebugMod = true) {
+
+
             if (source.getAttacker() instanceof PlayerEntity) {
-                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say Attacker is instanceof PlayerEntity");
-                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say Health of the bear is: "+this.getHealth());
-                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say difficulty is " + source.getAttacker().getEntityWorld().getDifficulty().getName());
+                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(),"/say (AddedWith_getServer)DmgSource: "+source.getName() + " Attacker: " + source.getAttacker().getEntityName());
 
+                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().
+                            getServer().getCommandSource(), "/say (getServer)Attacker is instanceof PlayerEntity");
+                    source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().
+                            getServer().getCommandSource(), "/say (getServer)Health of the bear is: "+this.getHealth());
+                    source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().
+                            getServer().getCommandSource(), "/say (getServer)difficulty is " + source.getAttacker().getEntityWorld().getDifficulty().getName());
 
-            } else if (source.getAttacker() instanceof ServerPlayerEntity) {
-                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say Attacker is instanceof ServerPlayerEntity");
-            } else {
-                source.getAttacker().getServer().getCommandManager().execute(source.getAttacker().getServer().getCommandSource(), "/say We have no fucking idea who the attacker is");
+                }
             }
-        }
+
+
+            }
+
 
 
 
@@ -222,6 +247,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
         super.initDataTracker();
         this.dataTracker.startTracking(WARNING, false);
         this.dataTracker.startTracking(INRAGEMODE, false);
+
     }
 
     public void tick() {
@@ -242,7 +268,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
         if (this.warningSoundCooldown > 0) {
             --this.warningSoundCooldown;
         }
-
+        //Decreasing the number of ticks until rage mode ends, but only if the bear is not angry at anyone.
         if (this.getRageModeTimeInTicks() > 0 && this.getAngryAt() == null) {
             this.setRageModeTimeInTicks(this.getRageModeTimeInTicks() - 1);
             if (this.getRageModeTimeInTicks() == 0) {
@@ -254,6 +280,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
         if (!this.world.isClient) {
             this.tickAngerLogic((ServerWorld)this.world, true);
             if (this.isInRageMode() == true && this.getServer().getTicks() % 4==0 && this.getAngryAt() == null) {
+                //We want the bear to get angry at any player that comes to close while it is in rage mode.
                 if (((ServerWorld) this.world).getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue() - 10.0D,true) != null) {
                     this.setAngryAt(((ServerWorld) this.world).getClosestPlayer(this.getX(),this.getY(),this.getZ(),this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE).getValue() - 10.0D + 5.0D,true).getUuid());
                 }
@@ -266,7 +293,7 @@ public class GrizzlyBearEntity extends AnimalEntity implements Angerable {
                         this.setAngryAt(null);
                     }
                 }
-                //Debug code that helps show roughly the generic follow range.
+                //Debug code that helps show roughly the generic follow range. Do not remove.
                 /*float radius = (float) this.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE - 10.0D).getValue();
 
                 //Code to draw aggro range

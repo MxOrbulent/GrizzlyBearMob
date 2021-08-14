@@ -21,7 +21,8 @@ public class GrizzlyBearEntityRenderer extends MobEntityRenderer<GrizzlyBearEnti
 
     public Identifier getTexture(GrizzlyBearEntity grizzlyBearEntity) {
 
-
+        //If the bear is in ragemode, check dataTracker (used to sync) for if it is. if so, return
+        //the rage texture instead.
         if (grizzlyBearEntity.isInRageMode() == true) {
             return TEXTURE_RAGE;
         }
